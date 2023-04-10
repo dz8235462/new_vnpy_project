@@ -6,7 +6,7 @@ from vnpy_ctastrategy.strategies.double_ma_strategy import DoubleMaStrategy
 
 
 def main():
-    start = pd.to_datetime("20200101",
+    start = pd.to_datetime("20200406",
                            format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
 
     end = pd.to_datetime("20230101",
@@ -15,13 +15,13 @@ def main():
     engine = BacktestingEngine()
     engine.log_output = True
     # 配置引擎参数
-    original_capital = 100000
+    original_capital = 1000000
     engine.set_parameters(vt_symbol="rb9999.SHFE",
                           start=start,
                           end=end,
                           interval=Interval.MINUTE,
                           slippage=1,  #
-                          rate=1.01 / 10000,
+                          rate=0.25 / 10000,
                           size=10,
                           pricetick=1,
                           capital=original_capital)
