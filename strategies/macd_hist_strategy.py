@@ -1,13 +1,13 @@
+import scipy.special
 from vnpy.trader.object import (
     BarData,
 )
-import scipy.special
-from vnpy_ctastrategy import CtaTemplate
 
+from strategies.base_cta_strategy import BaseCtaStrategy
 from util.day_bar_generator import DayBarGenerator
 
 
-class MacdHistStrategy(CtaTemplate):
+class MacdHistStrategy(BaseCtaStrategy):
     # 策略作者
     author = "Dongzhi"
     # 日志
@@ -27,37 +27,17 @@ class MacdHistStrategy(CtaTemplate):
     slow_ma0 = 0.0
     slow_ma1 = 0.0
 
-    need_stop = 1  # 0/1是否需要止损
-    trailing_percent = 5.0  # 百分比移动止损，如2%止损
-    last_stop_order_id = None
-
-    # 移动止损
-    intraTradeHigh = 0  # 持仓期内最高点
-    intraTradeLow = float('inf')  # 持仓期内最低点
-    longStop = 0  # 多头止损价格
-    shortStop = 0  # 空头止损价格
-
     # 添加参数和变量名到对应的列表
     parameters = ["need_stop", "trailing_percent", "bar_window", "fast_window", "mid_window", "slow_window",
-                  "deposit_rate", "percent", 'capital', 'size']
-    variables = ["fast_ma0", "fast_ma1", "slow_ma0", "slow_ma1", "capital"]
+                  "percent", 'capital', 'size']
+    variables = ["intraTradeHigh", "intraTradeLow", "capital"]
 
     def __init__(self, cta_engine, strategy_name, vt_symbol, setting):
         super().__init__(cta_engine, strategy_name, vt_symbol, setting)
-        self.dbg = DayBarGenerator(max_length=self.slow_window + 1)
-        self.need_stop_for_now = False
-        self.stop_price = None
+        self.dbg = DayBarGenerator(max_length=100)
 
-    def on_init(self):
-        self.load_bar(10)
+    def on_bar_m(self, bar: BarData):
 
-    def output(self, msg):
-        # print(msg)
-        pass
-
-    def on_bar(self, bar: BarData):
-
-        # self.write_log("on_bar_m")
         self.output("on_bar_m : %s" % str(bar))
         """
         通过该函数收到新的1分钟K线推送。
@@ -66,7 +46,7 @@ class MacdHistStrategy(CtaTemplate):
         self.dbg.update_bar(bar)
 
         # 若缓存的K线数量尚不够计算技术指标，则直接返回
-        if not self.dbg.is_inited(self.slow_window):
+        if not self.dbg.is_inited(30):
             # print("not inited")
             return
         # 计算快速均线
@@ -171,47 +151,3 @@ class MacdHistStrategy(CtaTemplate):
 
         self.put_event()
 
-    def stop_order(self, bar: BarData, need_cancel_all=False, do_stop=True, tailing_ratio=1.0):
-        self.need_stop_for_now = False
-        first_after_start = self.stop_price is None
-        self.stop_price = None
-        if self.pos == 0:
-            self.intraTradeHigh = 0
-            self.intraTradeLow = float('inf')
-        if self.need_stop and self.pos != 0:
-            # 移动止损策略
-            if self.pos > 0:
-                self.intraTradeLow = bar.low_price
-                if bar.high_price > self.intraTradeHigh or first_after_start:
-                    # 撤销原有所有单
-                    if need_cancel_all:
-                        self.cancel_all()
-                    elif self.last_stop_order_id is not None:
-                        for o_id in self.last_stop_order_id:
-                            self.cancel_order(o_id)
-                    self.intraTradeHigh = max(self.intraTradeHigh, bar.high_price)
-                    # 计算止损价位
-                    self.longStop = self.intraTradeHigh * (1 - tailing_ratio * self.trailing_percent / 100)
-                    if do_stop:
-                        self.output("stop order sell on longStop:%s, high:%s" % (self.longStop, self.intraTradeHigh))
-                        self.last_stop_order_id = self.sell(self.longStop, self.pos, stop=True)
-                    self.need_stop_for_now = True
-                    self.stop_price = self.longStop
-            elif self.pos < 0:
-                self.intraTradeHigh = bar.high_price
-                if bar.low_price < self.intraTradeLow or first_after_start:
-                    # 撤销原有所有单
-                    if need_cancel_all:
-                        self.cancel_all()
-                    elif self.last_stop_order_id is not None:
-                        for o_id in self.last_stop_order_id:
-                            self.cancel_order(o_id)
-                    self.intraTradeLow = min(self.intraTradeLow, bar.low_price)
-                    # 计算止损价位
-                    self.shortStop = self.intraTradeLow * (1 + tailing_ratio * self.trailing_percent / 100)
-                    if do_stop:
-                        self.output("stop order cover on shortStop:%s, low:%s" % (self.shortStop, self.intraTradeLow))
-                        self.last_stop_order_id = self.cover(self.shortStop, -self.pos, stop=True)
-                    self.need_stop_for_now = True
-                    self.stop_price = self.shortStop
-        return self.need_stop_for_now, self.stop_price
