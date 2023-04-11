@@ -11,23 +11,28 @@ MINUTE = "MINUTE"
 
 
 class DayBarGenerator:
-    max_length = 10
+    # k线数组最大长度，超出长度后丢弃过期数据
+    max_length = 60
 
-    def __init__(self, max_length: int = 10, bar_length=1, length_unit=DAY):
+    def __init__(self, max_length: int = 60, bar_length=1, length_unit=DAY):
+        """初始化，设置用于计算的k线数量最大数量及k线长度和单位"""
         self.max_length = max_length
         self.bars: BarData = []
         self.am = ArrayManager()
         self.current_bar: BarData = None
+        # 支持N分钟k线、小时线、日线
+        self.bar_length = bar_length
+        self.length_unit = length_unit
+        # 缓存相关，由于日K线的统计数据在当天基本不变，故通过缓存提高回测速度
         self.cache = {}
         self.donchian_data = {}
         self.atr_data = {}
         self.boll_data = {}
         self.ma_data = {}
         self.wma_data = {}
-        self.bar_length = bar_length
-        self.length_unit = length_unit
 
     def is_same_bar(self, datetime1, datetime2):
+        """判断是否属于同一根k线"""
         if self.length_unit == DAY:
             if datetime1.day != datetime2.day:
                 return False
@@ -41,9 +46,11 @@ class DayBarGenerator:
         return True
 
     def is_inited(self, length: int):
+        """设置最小值，确保数据量低于length时不产生交易信号"""
         return len(self.bars) >= length
 
     def reset_cache(self):
+        """k线更新时重置缓存"""
         self.cache = {}
         self.donchian_data = {}
         self.atr_data = {}
@@ -52,19 +59,23 @@ class DayBarGenerator:
         self.wma_data = {}
 
     def update_bar(self, bar: BarData, init_function=None):
+        """将新的k线更新到数据中"""
         if bar is None:
             return
         if self.current_bar is None:
             self.current_bar = bar
             return
+        # 新bar不属于上一根k线，则将旧数据归档，新数据作为当前k线开始汇总
         if not self.is_same_bar(self.current_bar.datetime, bar.datetime):
             if init_function:
                 init_function(self.current_bar)
             self.bars.append(self.current_bar)
             self.am.update_bar(self.current_bar)
+            # 达到上限移除过期数据
             if len(self.bars) > self.max_length:
                 self.bars.pop(0)
             self.current_bar = bar
+            # 重置缓存
             self.reset_cache()
             return
         self.current_bar.high_price = max(self.current_bar.high_price, bar.high_price)
@@ -74,12 +85,14 @@ class DayBarGenerator:
             self.current_bar.close_price = bar.close_price
 
     def get_last(self):
+        """获取最后一根k线，主要用于获取最新收盘价等信息"""
         length = len(self.bars)
         if length < 1:
             return None
         return self.bars[length - 1]
 
     def donchian(self, window: int):
+        """唐奇安通道"""
         if window is None or len(self.bars) < window:
             return None, None
         key = 'key_%s' % window
@@ -91,6 +104,7 @@ class DayBarGenerator:
         return up, down
 
     def atr(self, window: int):
+        """真实波动率"""
         key = 'key_%s' % window
         if key in self.atr_data:
             atr_value = self.atr_data[key]
@@ -100,6 +114,7 @@ class DayBarGenerator:
         return atr_value
 
     def sma(self, window: int, array: bool = False):
+        """简单移动平均"""
         key = 'key_%s' % window
         if not array:
             if key in self.ma_data:
@@ -113,6 +128,7 @@ class DayBarGenerator:
         return ma_value
 
     def wma(self, window: int, array: bool = False):
+        """加权移动平均"""
         key = 'key_%s' % window
         if not array:
             if key in self.wma_data:
@@ -129,6 +145,7 @@ class DayBarGenerator:
              slow_period: int,
              signal_period: int,
              array: bool = False):
+        """MACD"""
         macd_cache = "macd_cache"
         if not macd_cache in self.cache:
             self.cache[macd_cache] = {}
@@ -146,6 +163,7 @@ class DayBarGenerator:
 
 
 if __name__ == '__main__':
+    # 测试方法
     start = pd.to_datetime("20100101",
                            format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
     print(start + timedelta(days=10))
