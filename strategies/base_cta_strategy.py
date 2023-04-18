@@ -11,6 +11,8 @@ from vnpy_ctastrategy import CtaTemplate, StopOrder
 from vnpy_ctastrategy.backtesting import BacktestingEngine
 from vnpy.trader.object import AccountData
 
+from log.log_init import get_logger
+
 
 class BaseCtaStrategy(CtaTemplate):
     """通用CTA模板"""
@@ -31,6 +33,9 @@ class BaseCtaStrategy(CtaTemplate):
     intraTradeLow = float('inf')  # 持仓期内最低点
     longStop = 0  # 多头止损价格
     shortStop = 0  # 空头止损价格
+
+    # 初始化阶段不输出日志
+    inited_internal = False
 
     def __init__(self, cta_engine, strategy_name, vt_symbol, setting):
         """"""
@@ -53,6 +58,9 @@ class BaseCtaStrategy(CtaTemplate):
             self.back_testing = True
         if self.back_testing:
             self.capital = cta_engine.capital
+        # 日志
+        logger_name = "backTesting" if self.back_testing else "main"
+        self.logger = get_logger(logger_name)
 
     def on_init(self):
         """
@@ -60,6 +68,8 @@ class BaseCtaStrategy(CtaTemplate):
         """
         # 加载历史数据用于初始化回放
         self.load_bar(100, use_database=True)
+        # 加载完历史数据后，打开日志输出
+        self.inited_internal = True
         self.output("策略初始化")
 
     def on_start(self):
@@ -183,6 +193,5 @@ class BaseCtaStrategy(CtaTemplate):
         pass
 
     def output(self, msg: str, display=False):
-        # self.logger.info("%s==== %s" % (self.strategy_name, msg))
-        # print(msg)
-        pass
+        if self.inited_internal or display:
+            self.logger.info("%s==== %s" % (self.strategy_name, msg))

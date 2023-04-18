@@ -1,0 +1,41 @@
+version: 1
+formatters:
+  brief:
+    format: "%(asctime)s - %(message)s"
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: simple
+    level: DEBUG
+    stream: ext://sys.stdout
+  backTesting:
+    class: logging.StreamHandler
+    formatter: simple
+    level: INFO
+    stream: ext://sys.stdout
+  debugFile:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: D:\dongzhi//logs//vnpy-debug.log
+    maxBytes: 10000485760
+    backupCount: 20
+    encoding: utf8
+  errorFile:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: simple
+    filename: D:\//dongzhi/logs//vnpy-error.log
+    maxBytes: 10485760
+    backupCount: 20
+    encoding: utf8
+loggers:
+  main:
+    level: INFO
+    handlers: [ console, debugFile, errorFile ]
+  backTesting:
+    level: INFO
+    handlers: [ backTesting ]
+
