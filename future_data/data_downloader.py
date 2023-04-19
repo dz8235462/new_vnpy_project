@@ -65,6 +65,7 @@ def download_data_from_rq(vt_symbol, start_date=start, end_date=time.strftime("%
     exchange_code = exchange
     assert exchange_code in mapping_rq
     exchange = mapping_rq.get(exchange_code)
+    security_code_inner = symbol + month
     if exchange == Exchange.CZCE and month != "9999" and month != "8888":
         # 郑商所月份仅有3位，为兼容将4位转为3位
         security_code_inner = symbol + month[-3:]
@@ -74,7 +75,7 @@ def download_data_from_rq(vt_symbol, start_date=start, end_date=time.strftime("%
     with db.atomic():
         # database.db.ping(reconnect=True)
         overview: DbBarOverview = DbBarOverview.get_or_none(
-            DbBarOverview.symbol == security_code,
+            DbBarOverview.symbol == security_code_inner,
             DbBarOverview.exchange == exchange.value,
             DbBarOverview.interval == vnpy_frequency.value,
         )
@@ -92,7 +93,7 @@ def download_data_from_rq(vt_symbol, start_date=start, end_date=time.strftime("%
         end_date = datetime.strptime(end_date, TIME_FORMAT) if type(end_date) == str else end_date
         print("start_date=%s" % start_date)
         print("end_date=%s" % end_date)
-        req = HistoryRequest(symbol=security_code, exchange=exchange,
+        req = HistoryRequest(symbol=security_code_inner, exchange=exchange,
                              start=start_date, end=end_date,
                              interval=vnpy_frequency)
         data_list = rqClient.query_bar_history(req)
@@ -109,9 +110,3 @@ def download_data_from_rq(vt_symbol, start_date=start, end_date=time.strftime("%
         pass
 
 
-# 基本参数
-# security_codes = ["MA8888","SA8888","fu8888","m8888","TA8888","i8888","y8888","au8888","FG8888","al8888"]  # XSGE
-security_codes = ["TA209.CZCE" ]  # XSGE
-if __name__ == '__main__':
-    for security_code in security_codes:
-        download_data_from_rq(security_code, start, end)

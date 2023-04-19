@@ -36,6 +36,6 @@ loggers:
     level: INFO
     handlers: [ console, debugFile, errorFile ]
   backTesting:
-    level: INFO
+    level: WARN
     handlers: [ backTesting ]
 
