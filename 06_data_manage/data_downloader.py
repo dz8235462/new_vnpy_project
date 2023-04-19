@@ -101,9 +101,6 @@ def download_data_from_rq(vt_symbol, start_date=start, end_date=time.strftime("%
             return
         logger.info("start_date=%s" % start_date.replace(tzinfo=pytz.timezone("Etc/GMT-8")))
         logger.info(data_list[-1].datetime)
-        #logger.info(list[-1].datetime==start_date.replace(tzinfo=pytz.timezone("Etc/GMT-8")))
-        #list = [bar for bar in list if bar.datetime > start_date.replace(tzinfo=pytz.timezone("Etc/GMT-8"))]
-        print(len(data_list))
         if len(data_list) < 1:
             logger.error("all data saved")
             return
@@ -117,4 +114,4 @@ def download_data_from_rq(vt_symbol, start_date=start, end_date=time.strftime("%
 security_codes = ["TA209.CZCE" ]  # XSGE
 if __name__ == '__main__':
     for security_code in security_codes:
-        download_data(security_code, start, end)
+        download_data_from_rq(security_code, start, end)
