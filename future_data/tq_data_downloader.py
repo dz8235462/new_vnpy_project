@@ -35,8 +35,6 @@ def download_from_tq(vt_symbols: list, size: int = 5000):
             klines = api.get_kline_serial(tq_symbol, 60, data_length=size)
             bars = []
             for i in range(len(klines)):
-                # print("K线变化", datetime.datetime.fromtimestamp(klines.iloc[i]["datetime"] / 1e9), klines.open.iloc[i],
-                #       klines.close.iloc[i], klines.high.iloc[i], klines.low.iloc[i], klines.close_oi.iloc[i])
                 bar: BarData = BarData(gateway_name="TQ",
                                        symbol=symbol,
                                        exchange=mapping_rq.get(exchange),
