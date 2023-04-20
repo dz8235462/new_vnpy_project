@@ -11,7 +11,12 @@ from vnpy_ctastrategy import CtaTemplate, StopOrder
 from vnpy_ctastrategy.backtesting import BacktestingEngine
 from vnpy.trader.object import AccountData
 
+from future_data.trade_data import save_trade_data
 from log.log_init import get_logger
+
+GLOBAL_SETTINGS = {
+    "BACK_TESTING_DATA_SAVE": False
+}
 
 
 class BaseCtaStrategy(CtaTemplate):
@@ -178,6 +183,13 @@ class BaseCtaStrategy(CtaTemplate):
         通过该函数收到成交推送。
         """
         self.output("new trade success: %s" % trade)
+        # 成交后策略逻辑仓位发生变化
+        trade.closed_volume = 0
+        # self.calculate_revenue(trade)
+        if not self.back_testing or GLOBAL_SETTINGS["BACK_TESTING_DATA_SAVE"]:
+            # 生产使用时按本地时间存数据
+            save_trade_data(self.strategy_name, self.capital, trade,
+                            use_local_time=not self.back_testing)
         self.put_event()
 
     def on_stop_order(self, stop_order: StopOrder):
