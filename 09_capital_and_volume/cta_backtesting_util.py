@@ -26,7 +26,7 @@ def main():
                           size=10,
                           pricetick=1,
                           capital=original_capital)
-    engine.add_strategy(MacdHistStrategy, {})
+    engine.add_strategy(MacdHistStrategy, {"percent": 10})
     engine.load_data()
     engine.run_backtesting()
     df1 = engine.calculate_result()

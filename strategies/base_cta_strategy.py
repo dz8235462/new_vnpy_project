@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from vnpy.trader.constant import Offset, Direction
 from vnpy.trader.object import (
     TickData,
     BarData,
@@ -11,7 +12,7 @@ from vnpy_ctastrategy import CtaTemplate, StopOrder
 from vnpy_ctastrategy.backtesting import BacktestingEngine
 from vnpy.trader.object import AccountData
 
-from future_data.trade_data import save_trade_data
+from future_data.trade_data import save_trade_data, TradeStatus, DbTradeData, update_db_trade_data, get_unclosed_trades
 from log.log_init import get_logger
 
 GLOBAL_SETTINGS = {
@@ -38,6 +39,14 @@ class BaseCtaStrategy(CtaTemplate):
     intraTradeLow = float('inf')  # 持仓期内最低点
     longStop = 0  # 多头止损价格
     shortStop = 0  # 空头止损价格
+    # 计算仓位用
+    size = 10
+    capital = 20000
+    rate = 1.01 / 10000
+    slippage = 0
+    # 百分比开仓
+    deposit_rate = 10  # 保证金比例k%
+    percent = 30  # 持仓仓位
 
     # 初始化阶段不输出日志
     inited_internal = False
@@ -57,12 +66,18 @@ class BaseCtaStrategy(CtaTemplate):
         self.am = ArrayManager()
         self.need_stop_for_now = False
         self.stop_price = None
+        # 回测时记录未平仓记录，实盘时直接从数据库获取
+        self.last_trades = []
         # 回测时自动获取总资金
         self.back_testing = False
         if isinstance(cta_engine, BacktestingEngine):
             self.back_testing = True
         if self.back_testing:
+            # 读取回测配置
             self.capital = cta_engine.capital
+            self.rate = cta_engine.rate
+            self.size = cta_engine.size
+            self.slippage = cta_engine.slippage
         # 日志
         logger_name = "backTesting" if self.back_testing else "main"
         self.logger = get_logger(logger_name)
@@ -185,7 +200,7 @@ class BaseCtaStrategy(CtaTemplate):
         self.output("new trade success: %s" % trade)
         # 成交后策略逻辑仓位发生变化
         trade.closed_volume = 0
-        # self.calculate_revenue(trade)
+        self.calculate_revenue(trade)
         if not self.back_testing or GLOBAL_SETTINGS["BACK_TESTING_DATA_SAVE"]:
             # 生产使用时按本地时间存数据
             save_trade_data(self.strategy_name, self.capital, trade,
@@ -207,3 +222,83 @@ class BaseCtaStrategy(CtaTemplate):
     def output(self, msg: str, display=False):
         if self.inited_internal or display:
             self.logger.info("%s==== %s" % (self.strategy_name, msg))
+
+    def calculate_revenue(self, trade: TradeData):
+        # 已平仓手数
+        trade.closed_volume = 0
+        # 默认未平仓
+        trade.status = TradeStatus.UN_CLOSED.value
+
+        if trade.offset == Offset.NONE:
+            return
+        # 查询反方向的未平仓开仓单
+        direction = Direction.SHORT if trade.direction == Direction.LONG else Direction.LONG
+        # 实盘或指定回测时持久化交易记录
+        if not self.back_testing or GLOBAL_SETTINGS["BACK_TESTING_DATA_SAVE"]:
+            self.last_trades = get_unclosed_trades(self.strategy_name, self.vt_symbol, direction.name)
+        # 开仓交易记录直接储存到内存中
+        if trade.offset == Offset.OPEN:
+            # open only need to save data into db or list
+            self.last_trades.append(trade)
+            return
+
+        # 根据平仓方向过滤反方向的开仓数据
+        last_trades_of_direction = [v for v in self.last_trades if
+                                    v.direction == direction or v.direction == direction.name]
+        # 开始按先进先出匹配平仓数据
+        while len(last_trades_of_direction) > 0 and trade.closed_volume < trade.volume:
+            last_trade = last_trades_of_direction[0]
+
+            # 按较小值匹配当前成交量与开仓数据未平仓量
+            c_volume = min(last_trade.volume - last_trade.closed_volume, trade.volume - trade.closed_volume)
+            # 记录平仓
+            last_trade.closed_volume += c_volume
+            trade.closed_volume += c_volume
+            # 已全部平仓，移除数据并修改到数据库
+            if last_trade.volume <= last_trade.closed_volume:
+                last_trade.status = TradeStatus.CLOSED.value
+                last_trades_of_direction.remove(last_trade)
+                self.last_trades.remove(last_trade)
+            if isinstance(last_trade, DbTradeData):
+                update_db_trade_data(last_trade)
+            # 计算每张合约的损益
+            # print("self.last_trade.tradeid %s" % self.last_trade.tradeid)
+            # print("self.trade.tradeid %s" % trade.tradeid)
+            direction = -1 if trade.direction == Direction.LONG else 1
+            revenue_per_contract = direction * (trade.price - last_trade.price)
+            self.output("%s , %s ,%s" % (last_trade.tradeid, trade.tradeid, revenue_per_contract))
+            # 含手续费后的损益
+            revenue_per_contract_with_commission = revenue_per_contract - (
+                    trade.price + last_trade.price) * self.rate * 2 - self.slippage * 2
+            revenue_per_volume = revenue_per_contract_with_commission * self.size
+            volume = c_volume
+            self.output(
+                "last_order_id=%s,order_id=%s" % (last_trade.orderid, trade.orderid))
+            self.output(
+                "revenue_per_contract_with_commission=%s,volume=%s" % (
+                    revenue_per_contract_with_commission, volume))
+            total_revenue = revenue_per_volume * volume
+            # print(
+            #     'total_revenue=%s,trade.price=%s,last_trade.price=%s' % (
+            #         total_revenue, trade.price, last_trade.price))
+            msg = "datetime=%s,trade_vt_symbol=%s,trade.volume=%s,self.capital=%s,revenue_percent=%s" % (
+                trade.datetime, trade.vt_symbol, trade.volume, self.capital + total_revenue,
+                round(total_revenue / self.capital * 100, 2))
+            # print(msg)
+            self.output(msg)
+            self.output(self.pos)
+            self.capital += total_revenue
+            pass
+
+    def calculate_volume(self, current_price):
+        volume = 1
+        # 计算每手保证金
+        cost_per_order = self.size * current_price * self.deposit_rate / 100
+        volume = round(self.capital * self.percent / 100 / cost_per_order)
+        if volume <= 0:
+            volume = 1
+        # 防止超出总可用资本
+        if volume * cost_per_order > self.capital:
+            volume = volume - 1
+        self.output("self.capital: %s , volume: %s" % (self.capital, volume))
+        return volume

@@ -24,7 +24,8 @@ class MacdHistStrategy(BaseCtaStrategy):
     mid_ma1 = 0.0
 
     # 添加参数和变量名到对应的列表
-    parameters = ["need_stop", "trailing_percent", "bar_window", "fast_window", "mid_window"]
+    parameters = ["capital", "size", "rate", "slippage", "deposit_rate", "percent", "need_stop", "trailing_percent", "bar_window",
+                  "fast_window", "mid_window"]
     variables = ["intraTradeHigh", "intraTradeLow", "capital"]
 
     def __init__(self, cta_engine, strategy_name, vt_symbol, setting):
@@ -65,7 +66,9 @@ class MacdHistStrategy(BaseCtaStrategy):
         cross_1 = (self.fast_ma0 > self.mid_ma0)
 
         # 目前尚未进行资金管理，使用固定手数开仓
-        volume = 20
+        # volume = 20
+        # 动态计算开仓手数
+        volume = self.calculate_volume(bar.close_price)
 
         # 使用两个数组记录柱状线，长度可配置，便于判断两个数组的斜率是否一致
         macd_hist_trend = []

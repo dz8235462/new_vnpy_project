@@ -97,24 +97,24 @@ class DbTradeData(Model):
 #     pass
 #
 #
-# def get_unclosed_trades(strategy_name: str, symbol: str, direction: str):
-#     """获取所有未完全平仓的数据"""
-#     # database=get_database()
-#     # database.db.connect(reuse_if_open=True)
-#     with db.atomic():
-#         results = DbTradeData.select().where(
-#             DbTradeData.strategy_name == strategy_name
-#             , DbTradeData.symbol == symbol
-#             , DbTradeData.direction == direction
-#             , DbTradeData.status == TradeStatus.UN_CLOSED.value
-#             , DbTradeData.offset == Offset.OPEN.name).order_by(
-#             DbTradeData.datetime.asc())
-#         size = len(results)
-#         if size > 0:
-#             data = results.peek(n=size)
-#             return [data] if size == 1 else data
-#     return []
-#     pass
+def get_unclosed_trades(strategy_name: str, symbol: str, direction: str):
+    """获取所有未完全平仓的数据"""
+    # database=get_database()
+    # database.db.connect(reuse_if_open=True)
+    with db.atomic():
+        results = DbTradeData.select().where(
+            DbTradeData.strategy_name == strategy_name
+            , DbTradeData.symbol == symbol
+            , DbTradeData.direction == direction
+            , DbTradeData.status == TradeStatus.UN_CLOSED.value
+            , DbTradeData.offset == Offset.OPEN.name).order_by(
+            DbTradeData.datetime.asc())
+        size = len(results)
+        if size > 0:
+            data = results.peek(n=size)
+            return [data] if size == 1 else data
+    return []
+    pass
 
 
 def save_trade_data(strategy_name: str, capital: float, trade: TradeData, use_local_time=False):
@@ -149,12 +149,12 @@ def save_trade_data(strategy_name: str, capital: float, trade: TradeData, use_lo
     pass
 
 
-# def update_db_trade_data(db_trade_data: DbTradeData):
-#     # database=get_database()
-#     # database.db.connect(reuse_if_open=True)
-#     with db.atomic():
-#         db_trade_data.save()
-#     pass
+def update_db_trade_data(db_trade_data: DbTradeData):
+    # database=get_database()
+    # database.db.connect(reuse_if_open=True)
+    with db.atomic():
+        db_trade_data.save()
+    pass
 
 
 if __name__ == '__main__':
