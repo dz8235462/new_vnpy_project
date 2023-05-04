@@ -67,20 +67,20 @@ class DbTradeData(Model):
         indexes = ((("strategy_name", "tradeid"), False),)
 
 
-# def get_last_trade(strategy_name: str, symbol: str, direction: str):
-#     # database=get_database()
-#     # database.db.connect(reuse_if_open=True)
-#     with db.atomic():
-#         results = DbTradeData.select().where(
-#             DbTradeData.strategy_name == strategy_name
-#             , DbTradeData.symbol == symbol
-#             , DbTradeData.direction == direction
-#             , DbTradeData.offset == Offset.OPEN.name).order_by(
-#             DbTradeData.datetime.desc()).limit(1)
-#         if results is not None and len(results) > 0:
-#             return results.get()
-#     return None
-#     pass
+def get_last_trade(strategy_name: str, symbol: str, direction: str):
+    # database=get_database()
+    # database.db.connect(reuse_if_open=True)
+    with db.atomic():
+        results = DbTradeData.select().where(
+            DbTradeData.strategy_name == strategy_name
+            , DbTradeData.symbol == symbol
+            , DbTradeData.direction == direction
+            , DbTradeData.offset == Offset.OPEN.name).order_by(
+            DbTradeData.datetime.desc()).limit(1)
+        if results is not None and len(results) > 0:
+            return results.get()
+    return None
+    pass
 #
 #
 # def get_last_trade2(strategy_name: str, symbol: str, direction: str, offset: Offset):

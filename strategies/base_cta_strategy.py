@@ -116,7 +116,6 @@ class BaseCtaStrategy(CtaTemplate):
         """
         通过该函数收到Tick推送。
         """
-        # self.write_log("on_tick")
         self.connected = True
         if not check_real_trading_period(tick.datetime):
             self.output("not in trading period, %s" % tick)
