@@ -14,6 +14,7 @@ from vnpy.trader.object import AccountData
 
 from future_data.trade_data import save_trade_data, TradeStatus, DbTradeData, update_db_trade_data, get_unclosed_trades
 from log.log_init import get_logger
+from util.trading_period import check_real_trading_period
 
 GLOBAL_SETTINGS = {
     "BACK_TESTING_DATA_SAVE": False
@@ -81,6 +82,8 @@ class BaseCtaStrategy(CtaTemplate):
         # 日志
         logger_name = "backTesting" if self.back_testing else "main"
         self.logger = get_logger(logger_name)
+        # 测试服务连通性
+        self.connected = False
 
     def on_init(self):
         """
@@ -113,6 +116,11 @@ class BaseCtaStrategy(CtaTemplate):
         """
         通过该函数收到Tick推送。
         """
+        # self.write_log("on_tick")
+        self.connected = True
+        if not check_real_trading_period(tick.datetime):
+            self.output("not in trading period, %s" % tick)
+            return
         self.bg.update_tick(tick)
         self.put_event()
 
