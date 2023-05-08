@@ -13,6 +13,8 @@ from vnpy.trader.setting import SETTINGS
 from vnpy_ctp import CtpGateway
 
 from future_data.download_data_task import get_instance_for_cta, get_instance_for_manual
+from util.message_alert import ding_message
+from util.trading_period import check_real_trading_period
 
 SETTINGS["log.active"] = True
 SETTINGS["log.level"] = INFO
@@ -95,8 +97,14 @@ def run_child():
 
     while True:
         trading = check_trading_period()
-        if trading:
-            pass
+        if check_real_trading_period():
+            for strategy_name in cta_engine.strategies:
+                strategy = cta_engine.strategies[strategy_name]
+                if not strategy.trading or not strategy.connected:
+                    print("!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!")
+                    ding_message('vnpy服务启动异常，策略启动异常%s' % strategy_name)
+                    trading = False
+                    break
         # 非交易时间停止服务
         if not trading:
             print("关闭子进程")
