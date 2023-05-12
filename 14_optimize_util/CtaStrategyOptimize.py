@@ -60,12 +60,15 @@ def run_optimize(param_ranges, engine: BacktestingEngine, target: str = "end_bal
     start_time = time.time()
     best_param = {}
     # statistics = {}
+    # 循环执行直到超出一定次数或精度符合要求
     while True:
         optimization_setting = OptimizationSetting()
         # sharpe_ratio end_balance
         optimization_setting.set_target(target)
+        # 添加参数到回测引擎
         for param in param_ranges:
             if "scale" not in param:
+                # 控制参数精度
                 param["precision"], param["scale"] = precision_and_scale(param["step"])
             param["current_step"] = round((param["end"] - param["start"]) / step_constant, param["scale"])
             if param["current_step"] < param["step"]:
@@ -98,6 +101,7 @@ def run_optimize(param_ranges, engine: BacktestingEngine, target: str = "end_bal
             pass
         if not need_new_run:
             break
+        # 如3次仍无法发现盈利参数，直接结束
         if win_count == 0 and round_cnt >= 3:
             print("no win point is found, stop searching!!!!!!!!!!!!!!!!!!!!")
             break

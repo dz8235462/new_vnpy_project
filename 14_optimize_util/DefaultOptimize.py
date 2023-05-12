@@ -47,7 +47,7 @@ def main():
     param_ranges = [
         # {"name": "bar_window", "start": 1, "end": 10, "step": 1},
         {"name": "days", "start": 3, "end": 5, "step": 1},
-        # {"name": "stop_revenue_percent", "start": 0.5, "end": 2, "step": 0.01},
+        # {"name": "stop_revenue_percent", "start": 0.5, "end": 0.5, "step": 0.01},
         {"name": "k1", "start": 0.2, "end": 0.7, "step": min_step},
         {"name": "k2", "start": 0.4, "end": 1, "step": min_step}]
 
