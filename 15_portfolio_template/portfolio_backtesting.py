@@ -31,7 +31,7 @@ def get_portfolio_daily_pnl():
     original_capital = 1000000
     vt_settings = vt_settings_with_short_code
     vt_symbols = [
-                  "rb8888.SHFE",
+                  "rb8888.SHFE","m8888.DCE","MA8888.CZCE","TA8888.CZCE","ag8888.SHFE",
                   # "TA8888.CZCE",
                   # "ag8888.SHFE",  "TA8888.CZCE", "au8888.SHFE", "MA8888.CZCE",
                   # "jm8888.DCE",  "m8888.DCE",
@@ -61,7 +61,7 @@ def get_portfolio_daily_pnl():
     )
 
     engine.add_strategy(MacdHistPortfolioStrategy,
-                        {"mid_window": 40, "slow_window": 80})
+                        {"mid_window": 40, "slow_window": 80 ,"percent": 1})
     engine.load_data()
     engine.run_backtesting()
     daily_df = engine.calculate_result()
