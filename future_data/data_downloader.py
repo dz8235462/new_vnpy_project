@@ -1,12 +1,13 @@
 import logging
 
+import pandas
 import pytz
 
 from log.log_init import get_logger
 import time
 from datetime import datetime
 
-from vnpy.trader.database import (database,get_database)  # 重要，需要此步骤加载vnpy的数据库管理器
+from vnpy.trader.database import (database, get_database)  # 重要，需要此步骤加载vnpy的数据库管理器
 from vnpy_mysql.mysql_database import DbBarOverview, db
 from vnpy.trader.constant import Exchange, Interval
 from vnpy.trader.object import BarData, HistoryRequest
@@ -16,7 +17,6 @@ from vnpy.trader.setting import SETTINGS
 from util.vt_symbol_util import split_vnpy_format
 
 logger = get_logger()
-
 
 mapping_rq = {'CFFEX': Exchange.CFFEX,  # 中国金融期货交易所
               'INE': Exchange.INE,  # 上海国际能源交易中心
@@ -36,7 +36,7 @@ USE_RQ = False
 
 def download_data(vt_symbol, start_date=start, end_date=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())):
     if USE_RQ:
-        download_data_from_rq(vt_symbol,start_date,end_date)
+        download_data_from_rq(vt_symbol, start_date, end_date)
 
 
 def save_bar(bars):
@@ -110,3 +110,16 @@ def download_data_from_rq(vt_symbol, start_date=start, end_date=time.strftime("%
         pass
 
 
+if __name__ == '__main__':
+    bar: BarData = BarData(gateway_name="DB",
+                           symbol="test",
+                           exchange=Exchange.SHFE,
+                           datetime=pandas.to_datetime("20220101 00:00:00",
+                                                       format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai"),
+                           interval=vnpy_frequency,
+                           volume=2222,
+                           open_price=2222,
+                           high_price=2222,
+                           low_price=2222,
+                           close_price=2222)
+    save_bar([bar])
