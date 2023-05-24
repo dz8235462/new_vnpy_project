@@ -151,12 +151,13 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
         if e_up is not None:
             if unit > 0 and bar.close_price < e_down:
                 self.take_order(vt_symbol, 1, bar.close_price, direction=Direction.SHORT, offset=Offset.CLOSE)
-                self.vt_last_trade_status[symbol] = LOSS  # todo
+                self.vt_last_trade_status[symbol] = GAIN
             elif unit < 0 and bar.close_price > e_up:
                 self.take_order(vt_symbol, 1, bar.close_price, direction=Direction.LONG, offset=Offset.CLOSE)
-                self.vt_last_trade_status[symbol] = LOSS  # todo
+                self.vt_last_trade_status[symbol] = GAIN
 
         s1_up, s1_down = self.day_bgs[symbol].donchian(self.s1_window)
+        # 此逻辑主要用于自动换月后重新开始计算通道，避免复用过去的通道导致重复开单
         if symbol in self.use_new_donchian and self.use_new_donchian[symbol]:
             self.clear_donchian_cache(symbol)
             self.vt_donchian_1[symbol] = s1_up, s1_down
@@ -164,13 +165,19 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
             self.use_new_donchian[symbol] = False
             self.output("use_new_donchian symbol=%s"%(symbol))
             self.sync_data()
+        # 已经突破，使用突破时刻记录下的通道信息
         if symbol in self.vt_donchian_1 and self.vt_donchian_1[symbol] is not None:
             s1_up, s1_down = self.vt_donchian_1[symbol]
+        # 使用突破时刻的atr信息计算止损和开仓点位
         if symbol in self.vt_atr and self.vt_atr[symbol] is not None:
             atr = self.vt_atr[symbol]
         self.output("vt_symbol=%s,atr=%s,s1_up=%s,s1_down=%s,current=%s,capital=%s" % (vt_symbol, atr, s1_up, s1_down, bar.close_price, self.capital))
         if s1_up is not None:
             changed_unit = 0
+            # 对比当前价格与各单位价格，对于第i个单位来说（i从0开始）
+            # 多单价格应满足price 大于 s1_up + i / 2 * atr
+            # 如此时单位unit小于 i+1，则需要新增一单位持仓
+            # 空单与此类似
             for i in range(TurtlePortfolioStrategy.unit_one_contract):
                 self.output("vt_symbol=%s,bar.close_price=%s,s1_up + i/2*atr=%s,self.vt_used_unit[symbol] < i + 1=%s" % (
                         vt_symbol, bar.close_price, s1_up + i / 2 * atr, self.vt_used_unit[symbol] < i + 1))
@@ -187,11 +194,13 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
                     if symbol not in self.vt_last_trade_status or self.vt_last_trade_status[symbol] != GAIN:
                         changed_unit -= 1
                     self.vt_last_trade_status[symbol] = TRADING
+            # 开多
             if changed_unit > 0:
                 self.take_order(vt_symbol, changed_unit, bar.close_price, direction=Direction.LONG, offset=Offset.OPEN)
                 self.vt_donchian_1[symbol] = s1_up, s1_down
                 self.vt_atr[symbol] = atr
                 self.vt_stop_price[symbol] = bar.close_price - self.moving_stop_size * atr
+            # 开空
             elif changed_unit < 0:
                 self.take_order(vt_symbol, -changed_unit, bar.close_price, direction=Direction.SHORT,
                                 offset=Offset.OPEN)
@@ -257,6 +266,7 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
             for contract in contracts_related:
                 if contract not in self.vt_used_unit:
                     continue
+                # 将同方向的合约单位相加
                 unit_of_contract = self.vt_used_unit[contract] * (1 if direction == Direction.LONG else -1)
                 related_unit += unit_of_contract if unit_of_contract > 0 else 0
             if related_unit >= TurtlePortfolioStrategy.unit_same_market:
@@ -267,6 +277,7 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
             for contract in self.vt_used_unit:
                 if contract not in self.vt_used_unit:
                     continue
+                # 将同方向的合约单位相加
                 unit_of_contract = self.vt_used_unit[contract] * (1 if direction == Direction.LONG else -1)
                 total_unit += unit_of_contract if unit_of_contract > 0 else 0
             if total_unit >= TurtlePortfolioStrategy.unit_same_direction:
@@ -274,11 +285,14 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
                 return
             # 判断资金是否足够
             # 更新单位与占用资金
-            self.vt_used_unit[symbol] += coefficient*unit
+            self.vt_used_unit[symbol] += coefficient * unit
             unit_size = self.size_of_atr(symbol, self.atr_window)
+            # 判断目标持仓数量与当前持仓的差距
             change_size = self.get_change_pos(vt_symbol, self.vt_used_unit[symbol], unit_size)
+            # 计算当前品种使用的保证金
             used_deposit = self.get_deposit(symbol, price, change_size)
             if pos == 0:
+                # 由于保证金为策略内部计算，可能存在误差，故仓位全平时将数据归0
                 self.vt_used_capital[symbol] = 0
             used_capital = 0
             for contract in self.vt_used_capital:
@@ -288,10 +302,11 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
             #        self.capital, used_capital, round(used_capital / self.capital * 100, 2)))
             self.output("capital=%s,used=%s,percent=%s" % (
                 self.capital, used_capital, round(used_capital / self.capital * 100, 2)))
+            # 新开仓后如超出资金使用限制，则撤销变更
             if used_capital + used_deposit > self.capital * TurtlePortfolioStrategy.max_use_percent / 100:
                 # print("capital is used beyond limit, used_capital=%s,used_deposit=%s,capital=%s" % (
                 #     used_capital, used_deposit, self.capital))
-                self.vt_used_unit[symbol] -= coefficient
+                self.vt_used_unit[symbol] -= coefficient * unit
                 self.output("used_capital + used_deposit > self.capital * TurtlePortfolioStrategy.max_use_percent / 100")
                 return
 
@@ -305,7 +320,7 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
                 self.cancel_all()
                 self.need_cancel_all = False
                 self.output("take_order self.need_cancel_all=%s" % self.need_cancel_all)
-            # 下单
+            # 市价下单
             if direction == Direction.LONG:
                 self.buy(vt_symbol, price + 20, change_size)
                 self.output("buy vt_symbol=%s, price=%s, size=%s, current_pos=%s, inited_internal=%s" % (
@@ -316,6 +331,7 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
                     vt_symbol, price, change_size, pos, self.inited_internal))
             pass
         else:
+            # 平仓默认全平，清空所有业务数据
             unit = self.vt_used_unit[symbol]
             self.vt_used_unit[symbol] = 0
             self.vt_used_capital[symbol] = 0
@@ -343,6 +359,10 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
         self.vt_donchian_2[symbol] = None
 
     def check_pos(self, vt_symbol, price):
+        """由于存在各类异常情况，如下单失败或资金不足或代码bug
+           故持仓单位可能存在于预期持仓不一致的可能。
+           需要对预期持仓和实际持仓进行对比，如差异较大，则自动补足。
+        """
         exchange, symbol, month = split_vnpy_format(vt_symbol)
         unit = self.vt_used_unit[symbol]
         if unit == 0:
@@ -381,6 +401,11 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
         pass
 
     def get_change_pos(self, vt_symbol, target_unit, unit_size):
+        """计算目标持仓单位与当前实际持仓的差额
+           由于个人资金有限，可能出现一单位无法满足一手合约的情况，
+           故对风险适当放大，如一单位能够交易超过0.34手即3单位能超过一手的情况下，
+           则在第一个单位突破时即按一手开仓。
+        """
         origin_size = unit_size * abs(target_unit)
         if origin_size < 1 and target_unit != 0:
             origin_size = int(unit_size + 0.66)

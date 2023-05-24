@@ -22,7 +22,7 @@ def get_portfolio_daily_pnl():
     GLOBAL_SETTINGS["BACK_TESTING_DATA_SAVE"] = False
     start = pd.to_datetime("20100101",
                            format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
-    end = pd.to_datetime("20200101",
+    end = pd.to_datetime("20150101",
                                format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
 
     # 创建引擎,设置回测模式
@@ -32,7 +32,8 @@ def get_portfolio_daily_pnl():
     original_capital = 1000000
     vt_settings = vt_settings_with_short_code
     vt_symbols = [
-                  "rb8888.SHFE","m8888.DCE","MA8888.CZCE","TA8888.CZCE","ag8888.SHFE",
+                  "rb8888.SHFE","m8888.DCE",
+                  # "MA8888.CZCE","TA8888.CZCE","ag8888.SHFE",
                   # "TA8888.CZCE",
                   # "ag8888.SHFE",  "TA8888.CZCE", "au8888.SHFE", "MA8888.CZCE",
                   # "jm8888.DCE",  "m8888.DCE",
