@@ -22,17 +22,20 @@ def get_portfolio_daily_pnl():
     GLOBAL_SETTINGS["BACK_TESTING_DATA_SAVE"] = False
     start = pd.to_datetime("20100101",
                            format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
-    end = pd.to_datetime("20150101",
+    end = pd.to_datetime("20120101",
                                format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
 
     # 创建引擎,设置回测模式
     engine = BacktestingEngine()
     engine.log_output = True
     # 配置引擎参数
-    original_capital = 1000000
+    original_capital = 100000
     vt_settings = vt_settings_with_short_code
     vt_symbols = [
-                  "rb8888.SHFE","m8888.DCE",
+                  "rb8888.SHFE","TA8888.CZCE",
+                  "ag8888.SHFE",  "TA8888.CZCE", "au8888.SHFE", "MA8888.CZCE",
+                  "jm8888.DCE",  "m8888.DCE",
+                  "al8888.SHFE",
                   # "MA8888.CZCE","TA8888.CZCE","ag8888.SHFE",
                   # "TA8888.CZCE",
                   # "ag8888.SHFE",  "TA8888.CZCE", "au8888.SHFE", "MA8888.CZCE",

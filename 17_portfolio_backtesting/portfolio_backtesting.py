@@ -21,7 +21,7 @@ LOSE = "lose"
 def get_portfolio_daily_pnl():
     GLOBAL_SETTINGS["BACK_TESTING_DATA_SAVE"] = False
 
-    load_days = 10
+    load_days = 8
     start = pd.to_datetime("20100101",
                            format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
     end = start + timedelta(days=load_days)
