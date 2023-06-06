@@ -5,6 +5,7 @@ from vnpy.trader.constant import Direction, Offset
 from vnpy.trader.object import BarData
 
 from strategies.base_portfolio_strategy import BasePortfolioStrategy
+from strategies.main_contract_portfolio_strategy import MainContractPortfolioStrategy
 from util.day_bar_generator import DayBarGenerator
 from util.vt_symbol_util import split_vnpy_format
 
@@ -13,7 +14,7 @@ GAIN = 1
 LOSS = 2
 
 
-class TurtlePortfolioStrategy(BasePortfolioStrategy):
+class TurtlePortfolioStrategy(MainContractPortfolioStrategy):
     """"""
 
     author = "dongzhi"
@@ -90,12 +91,12 @@ class TurtlePortfolioStrategy(BasePortfolioStrategy):
             exchange, symbol, month = split_vnpy_format(vt_symbol)
             self.day_bgs[symbol] = DayBarGenerator(200)
 
-    def on_bars(self, bars: Dict[str, BarData]):
-        for vt_symbol in bars:
-            bar = bars[vt_symbol]
-            self.process_single_bar(bar)
+    # def on_bars(self, bars: Dict[str, BarData]):
+    #     for vt_symbol in bars:
+    #         bar = bars[vt_symbol]
+    #         self.process_single_bar(bar)
 
-    def process_single_bar(self, bar: BarData):
+    def process_main_contract_bar(self, bar: BarData):
         vt_symbol = bar.vt_symbol
         exchange, symbol, month = split_vnpy_format(vt_symbol)
         self.day_bgs[symbol].update_bar(bar)
