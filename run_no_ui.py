@@ -12,6 +12,7 @@ from vnpy.trader.engine import MainEngine
 from vnpy.trader.setting import SETTINGS
 from vnpy_ctp import CtpGateway
 
+from future_data.auto_change_month_task import get_change_month_for_cta
 from future_data.download_data_task import get_instance_for_cta, get_instance_for_manual
 from util.message_alert import ding_message
 from util.trading_period import check_real_trading_period
@@ -122,12 +123,14 @@ def run_parent():
     # 添加数据下载任务
     task = get_instance_for_cta()
     task2 = get_instance_for_manual()
+    task3 = get_change_month_for_cta()
     child_process = None
 
     while True:
         # check for download
         task.download()
         task2.download()
+        task3.auto_change_month()
 
         trading = check_trading_period()
 
