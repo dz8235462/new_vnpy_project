@@ -90,7 +90,7 @@ class MainContractPortfolioStrategy(BasePortfolioStrategy):
             month_set.remove(newest_month)
             for old_month in month_set:
                 self.outdated_contracts[concat_vnpy_format(symbol_exchange_map[symbol], symbol, old_month)] = \
-                    concat_vnpy_format(exchange, symbol, newest_month)
+                    concat_vnpy_format(symbol_exchange_map[symbol], symbol, newest_month)
             print("init_outdated_contract, outdated_contracts = %s" % self.outdated_contracts)
 
     def on_init(self):
