@@ -7,7 +7,7 @@ from strategies.macd_hist_strategy import MacdHistStrategy
 
 
 def main():
-    start = pd.to_datetime("20100101",
+    start = pd.to_datetime("20150101",
                            format='%Y%m%d %H:%M:%S.%f').tz_localize("Asia/Shanghai")
 
     end = pd.to_datetime("20200101",

@@ -71,28 +71,27 @@ class MainContractPortfolioStrategy(BasePortfolioStrategy):
         self.need_cancel_all = True
 
     def init_outdated_contract(self):
-        """
-        记录已换月的旧合约编码，便于自动换月,格式{old:new}
-        """
         symbol_month_map = {}
-        # 记录单个品种所有的合约月份
+        symbol_exchange_map = {}
         for vt_symbol in self.vt_symbols:
             exchange, symbol, month = split_vnpy_format(vt_symbol)
-            # 忽略主力连续
+            print("init_outdated_contract, exchange, symbol, month =%s , %s , %s , vt_symbol = %s" % (
+              exchange, symbol, month, vt_symbol))
             if month == MainContractPortfolioStrategy.history_contract_default_code:
                 continue
             if symbol not in symbol_month_map:
                 symbol_month_map[symbol] = set()
             new_month = int(month)
             symbol_month_map[symbol].add(new_month)
-        # 移除最新月份，仅保留过期月份，用于自动平仓
+            symbol_exchange_map[symbol] = exchange
         for symbol in symbol_month_map:
             month_set = symbol_month_map[symbol]
             newest_month = max(month_set)
             month_set.remove(newest_month)
             for old_month in month_set:
-                self.outdated_contracts[concat_vnpy_format(exchange, symbol, old_month)] = \
+                self.outdated_contracts[concat_vnpy_format(symbol_exchange_map[symbol], symbol, old_month)] = \
                     concat_vnpy_format(exchange, symbol, newest_month)
+            print("init_outdated_contract, outdated_contracts = %s" % self.outdated_contracts)
 
     def on_init(self):
         """
