@@ -18,7 +18,7 @@ class DayBarGenerator:
         """初始化，设置用于计算的k线数量最大数量及k线长度和单位"""
         self.max_length = max_length
         self.bars: BarData = []
-        self.am = ArrayManager()
+        self.am = ArrayManager(max_length)
         self.current_bar: BarData = None
         # 支持N分钟k线、小时线、日线
         self.bar_length = bar_length
