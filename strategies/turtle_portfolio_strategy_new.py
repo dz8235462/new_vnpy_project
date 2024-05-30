@@ -12,7 +12,7 @@ GAIN = 1
 LOSS = 2
 
 
-class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
+class TurtlePortfolioStrategy(MainContractPortfolioStrategy):
     """"""
 
     author = "dongzhi"
@@ -64,7 +64,7 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
         self.exit_window = 10
         self.atr_window = 20
         self.moving_stop_size = 1
-        self.percent_at_risk = TurtlePortfolioStrategyNew.percent_at_risk
+        self.percent_at_risk = TurtlePortfolioStrategy.percent_at_risk
         # 生成日线的工具
         # 记录相关市场的合约 {v1:[v1,v2,v3]}
         self.vt_relations = {}
@@ -185,7 +185,7 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
                 # print('short_close_today %s , %s , %s' % (
                 #     self.vt_last_close_time["%s_%s" % (symbol, Direction.SHORT)].date(), datetime.now().date(),
                 #     short_close_today))
-            for i in range(TurtlePortfolioStrategyNew.unit_one_contract):
+            for i in range(TurtlePortfolioStrategy.unit_one_contract):
                 self.output(
                     "vt_symbol=%s,bar.close_price=%s,s1_up + i/2*atr=%s,self.vt_used_unit[symbol] < i + 1=%s" % (
                         vt_symbol, bar.close_price, s1_up + i / 2 * atr, self.vt_used_unit[symbol] < i + 1))
@@ -204,12 +204,12 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
                     self.vt_last_trade_status[symbol] = TRADING
             # 如价格差距过大，说明已错过开仓点，直接忽略
             if changed_unit > 0 and bar.close_price > s1_up + (
-                    TurtlePortfolioStrategyNew.unit_one_contract - 0.8) / 2 * atr:
+                    TurtlePortfolioStrategy.unit_one_contract - 0.8) / 2 * atr:
                 changed_unit = 0
                 if unit == 0:
                     self.clear_donchian_cache(symbol)
             if changed_unit < 0 and bar.close_price < s1_down - (
-                    TurtlePortfolioStrategyNew.unit_one_contract - 0.8) / 2 * atr:
+                    TurtlePortfolioStrategy.unit_one_contract - 0.8) / 2 * atr:
                 changed_unit = 0
                 if unit == 0:
                     self.clear_donchian_cache(symbol)
@@ -233,7 +233,7 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
         #     s2_up, s2_down = self.vt_donchian_2[vt_symbol]
         # self.output("vt_symbol=%s,atr=%s,s2_up=%s,s2_down=%s" % (vt_symbol, atr, s2_up, s2_down))
         # if s2_up is not None:
-        #     for i in range(TurtlePortfolioStrategyNew.unit_one_contract):
+        #     for i in range(TurtlePortfolioStrategy.unit_one_contract):
         #         if bar.close_price > s2_up + i / 2 * atr and self.vt_used_unit[vt_symbol] < i + 1:
         #             # 记录突破,判断上次突破是否盈利
         #             self.take_order(vt_symbol, 1, bar.close_price, direction=Direction.LONG, offset=Offset.OPEN)
@@ -276,8 +276,8 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
             coefficient = (1 if direction == Direction.LONG else -1)
             # 判断是否需要继续开仓
             # 单合约上限
-            if abs(self.vt_used_unit[symbol]) >= TurtlePortfolioStrategyNew.unit_one_contract:
-                self.output("abs(self.vt_used_unit[symbol]) >= TurtlePortfolioStrategyNew.unit_one_contract")
+            if abs(self.vt_used_unit[symbol]) >= TurtlePortfolioStrategy.unit_one_contract:
+                self.output("abs(self.vt_used_unit[symbol]) >= TurtlePortfolioStrategy.unit_one_contract")
                 return
             # 相关市场上限
             contracts_related = self.vt_relations[symbol]
@@ -287,8 +287,8 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
                     continue
                 unit_of_contract = self.vt_used_unit[contract] * (1 if direction == Direction.LONG else -1)
                 related_unit += unit_of_contract if unit_of_contract > 0 and self.vt_used_capital[contract] > 0 else 0
-            if related_unit >= TurtlePortfolioStrategyNew.unit_same_market:
-                self.output("related_unit >= TurtlePortfolioStrategyNew.unit_same_market")
+            if related_unit >= TurtlePortfolioStrategy.unit_same_market:
+                self.output("related_unit >= TurtlePortfolioStrategy.unit_same_market")
                 return
             # 全市场上限
             total_unit = 0
@@ -297,8 +297,8 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
                     continue
                 unit_of_contract = self.vt_used_unit[contract] * (1 if direction == Direction.LONG else -1)
                 total_unit += unit_of_contract if unit_of_contract > 0 and self.vt_used_capital[contract] > 0 else 0
-            if total_unit >= TurtlePortfolioStrategyNew.unit_same_direction:
-                self.output("total_unit >= TurtlePortfolioStrategyNew.unit_same_direction")
+            if total_unit >= TurtlePortfolioStrategy.unit_same_direction:
+                self.output("total_unit >= TurtlePortfolioStrategy.unit_same_direction")
                 return
             # 判断资金是否足够
             # 更新单位与占用资金
@@ -316,12 +316,12 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
             #        self.capital, used_capital, round(used_capital / self.capital * 100, 2)))
             self.output("capital=%s,used=%s,percent=%s" % (
                 self.capital, used_capital, round(used_capital / self.capital * 100, 2)))
-            if used_capital + used_deposit > self.capital * TurtlePortfolioStrategyNew.max_use_percent / 100:
+            if used_capital + used_deposit > self.capital * TurtlePortfolioStrategy.max_use_percent / 100:
                 # print("capital is used beyond limit, used_capital=%s,used_deposit=%s,capital=%s" % (
                 #     used_capital, used_deposit, self.capital))
                 self.vt_used_unit[symbol] -= coefficient * unit
                 self.output(
-                    "used_capital + used_deposit > self.capital * TurtlePortfolioStrategyNew.max_use_percent / 100")
+                    "used_capital + used_deposit > self.capital * TurtlePortfolioStrategy.max_use_percent / 100")
                 return
 
             self.vt_used_capital[symbol] += used_deposit
@@ -415,6 +415,6 @@ class TurtlePortfolioStrategyNew(MainContractPortfolioStrategy):
         origin_size = unit_size * abs(target_unit)
         if origin_size < 1 and target_unit != 0:
             origin_size = int(
-                unit_size + (TurtlePortfolioStrategyNew.unit_one_contract - 1) / TurtlePortfolioStrategyNew.unit_one_contract)
+                unit_size + (TurtlePortfolioStrategy.unit_one_contract - 1) / TurtlePortfolioStrategy.unit_one_contract)
         change_size = int(origin_size - abs(self.get_pos(vt_symbol)))
         return change_size
